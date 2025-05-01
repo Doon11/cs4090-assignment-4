@@ -133,7 +133,6 @@ def capture_pytest_stdio(args):
     base_stdout = sys.stdout
     capture = io.StringIO()
     sys.stdout = capture
-    os.environ["PYTHONPATH"] = "src"
     with st.spinner("Running test..."):
         pytest.main(args)
     sys.stdout = base_stdout
