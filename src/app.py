@@ -1,5 +1,8 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
+import pytest
+import sys, io, os
 from datetime import datetime
 from tasks import load_tasks, save_tasks, filter_tasks_by_priority, filter_tasks_by_category, generate_unique_id
 
@@ -9,11 +12,11 @@ def main():
     # Load existing tasks
     tasks = load_tasks()
     
-    # Sidebar for adding new tasks
-    st.sidebar.header("Add New Task")
-    
+    # Sidebar tabs for adding new tasks or running pytests
+    add_task_tab, run_test_tab = st.sidebar.tabs(["Add Tasks", "Run Tests"])
+
     # Task creation form
-    with st.sidebar.form("new_task_form"):
+    with add_task_tab.form("new_task_form"):
         task_title = st.text_input("Task Title")
         task_description = st.text_area("Description")
         task_priority = st.selectbox("Priority", ["Low", "Medium", "High"])
@@ -35,7 +38,37 @@ def main():
             tasks.append(new_task)
             save_tasks(tasks)
             st.sidebar.success("Task added successfully!")
-    
+
+    with run_test_tab:
+        test_basic = st.button("Run basic tests")
+        test_advanced = st.button("Run advanced tests")
+        test_tdd = st.button("Run tdd tests")
+        test_bdd = st.button("Run bdd tests")
+        test_property = st.button("Run property tests")
+        html_cov_report = st.button("HTML Coverage Report")
+        
+        if test_basic:
+            output = capture_pytest_stdio(["-v", "tests/test_basic.py", "src/"])
+            test_dialog(output)
+
+        if test_advanced:
+            output = capture_pytest_stdio(["-v", "tests/test_advanced.py"])
+            test_dialog(output)
+        
+        if test_tdd:
+            st.sidebar.error("Not implemented!")
+
+        if test_bdd:
+            st.sidebar.error("Not implemented!")
+        
+        if test_property:
+            output = capture_pytest_stdio(["-v", "tests/test_property.py"])
+            test_dialog(output)
+
+        if html_cov_report:
+            output = capture_pytest_stdio(["--cov=src", "--cov-report=html", "tests/"])
+            html_dialog(output)
+
     # Main area to display tasks
     st.header("Your Tasks")
     
@@ -78,6 +111,34 @@ def main():
                 tasks = [t for t in tasks if t["id"] != task["id"]]
                 save_tasks(tasks)
                 st.rerun()
+
+
+@st.dialog("Test Results:", width="large")
+def test_dialog(results):
+    st.write(results)
+
+
+@st.dialog("Coverage Report:", width="large")
+def html_dialog(results):
+    st.write(results)
+    report_filename = "./htmlcov/index.html"
+    with open(report_filename, 'r') as file:
+        content = file.read()
+        tables = pd.read_html(io.StringIO(content))
+        df = tables[0]
+        st.dataframe(df)
+
+
+def capture_pytest_stdio(args):
+    base_stdout = sys.stdout
+    capture = io.StringIO()
+    sys.stdout = capture
+    os.environ["PYTHONPATH"] = "src"
+    with st.spinner("Running test..."):
+        pytest.main(args)
+    sys.stdout = base_stdout
+    return capture.getvalue()
+
 
 if __name__ == "__main__":
     main()
