@@ -6,3 +6,4 @@ pytest-html
 pytest-xdist
 pytest-bdd
 hypothesis
+lxml
